@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f5ef" />
+    <title>Fieldnote | Real estate market workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <script src="{{ url_for('static', filename='intake.js') }}" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Fieldnote home"
+        ><span class="brand-mark">F</span
+        ><span>fieldnote<span class="brand-dot">.</span></span></a
+      >
+      <div class="topbar-right">
+        <a class="workspace-nav" href="#intake">INTAKE</a>
+        <a class="workspace-nav" href="#analysis">MARKET ANALYSIS</a>
+        <span class="topbar-divider"></span>
+        <span class="local-state"
+          ><span class="state-dot"></span>Local workspace</span
+        ><span class="topbar-divider"></span
+        ><span class="topbar-caption">PROPERTY DATA / INTAKE</span>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="page-intro">
+        <div>
+          <p class="eyebrow">
+            <span class="eyebrow-line"></span>DATA WORKSPACE
+            <span class="eyebrow-index">01 / INTAKE</span>
+          </p>
+          <h1>Bring the market<br /><em>into focus.</em></h1>
+          <p class="intro-copy">
+            Build a separate, source-tracked property dataset from files,
+            individual records, and listing markup.
+          </p>
+        </div>
+        <div class="dataset-stamp">
+          <span class="stamp-label">EXTERNAL DATASET</span><strong>01</strong
+          ><span class="stamp-caption">Ames history stays separate</span>
+        </div>
+      </section>
+
+      <section
+        class="analysis-section"
+        id="analysis"
+        aria-labelledby="analysis-heading"
+      >
+        <div class="analysis-heading">
+          <div>
+            <p class="section-kicker">GOLD / MARKET ANALYSIS</p>
+            <h2 id="analysis-heading">Market signals</h2>
+          </div>
+          <span class="analysis-period">AMES HISTORICAL DATA</span>
+        </div>
+
+        <div class="analysis-metrics">
+          <article class="analysis-metric">
+            <span class="metric-label">OBSERVED QUARTERS</span>
+            <strong>{{ market_summary.period_count }}</strong>
+            <span class="metric-caption">quarterly sale periods</span>
+          </article>
+          <article class="analysis-metric">
+            <span class="metric-label">NEXT-QUARTER BASELINE</span>
+            {% if forecast.next_quarter_median_price is not none %}
+            <strong
+              >${{ '{:,.0f}'.format(forecast.next_quarter_median_price|float)
+              }}</strong
+            >
+            {% else %}
+            <strong>—</strong>
+            {% endif %}
+            <span class="metric-caption"
+              >{{ forecast.baseline_label|replace('_', ' ') }}</span
+            >
+          </article>
+          <article class="analysis-metric">
+            <span class="metric-label">SCREENED LISTINGS</span>
+            <strong>{{ opportunities|length }}</strong>
+            <span class="metric-caption">eligible for comp screening</span>
+          </article>
+        </div>
+
+        <div class="analysis-chart">
+          {% if market_chart_html %} {{ market_chart_html|safe }} {% else %}
+          <p class="analysis-empty">
+            No quarterly sale data is available for this dataset.
+          </p>
+          {% endif %}
+        </div>
+        <p class="analysis-note">{{ data_note }}</p>
+
+        <div class="opportunity-heading">
+          <div>
+            <p class="section-kicker">COMPARABLE SCREEN</p>
+            <h3>Investment opportunities</h3>
+          </div>
+          <span class="table-caption"
+            >Ranked by discount to observed price per square foot</span
+          >
+        </div>
+        <div class="table-frame opportunity-table">
+          <table>
+            <thead>
+              <tr>
+                <th>PROPERTY</th>
+                <th>NEIGHBORHOOD</th>
+                <th>ASKING PRICE</th>
+                <th>PRICE / SQ FT</th>
+                <th>COMP MEDIAN / SQ FT</th>
+                <th>DISCOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in opportunities %}
+              <tr>
+                <td>{{ row.address or 'Address not provided' }}</td>
+                <td>{{ row.neighborhood }}</td>
+                <td>${{ '{:,.0f}'.format(row.list_price|float) }}</td>
+                <td>${{ '{:,.0f}'.format(row.price_per_sqft|float) }}</td>
+                <td>
+                  ${{ '{:,.0f}'.format(row.comp_median_price_per_sqft|float) }}
+                </td>
+                <td>
+                  <span class="opportunity-discount"
+                    >{{ '{:.1f}'.format(row.discount_pct|float) }}%</span
+                  >
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="opportunity-empty">
+                  No priced listings are available for comparable screening yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="analysis-note">
+          Screening compares asking prices with observed historical sales and is
+          not an appraisal or investment recommendation.
+        </p>
+      </section>
+
+      <section
+        class="workspace-grid"
+        id="intake"
+        aria-label="Property data workspace"
+      >
+        <section class="intake-panel" aria-labelledby="intake-heading">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">ADD RECORDS</p>
+              <h2 id="intake-heading">Data intake</h2>
+            </div>
+            <span class="required-note">LOCAL IMPORT</span>
+          </div>
+
+          <div class="mode-tabs" role="tablist" aria-label="Import method">
+            <button
+              class="mode-tab is-active"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="upload-panel"
+              id="upload-tab"
+              data-mode="upload"
+            >
+              File
+            </button>
+            <button
+              class="mode-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="manual-panel"
+              id="manual-tab"
+              data-mode="manual"
+            >
+              Manual
+            </button>
+            <button
+              class="mode-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="html-panel"
+              id="html-tab"
+              data-mode="html"
+            >
+              Listing HTML
+            </button>
+          </div>
+
+          <form
+            class="intake-form mode-panel"
+            id="upload-panel"
+            role="tabpanel"
+            aria-labelledby="upload-tab"
+            data-panel="upload"
+          >
+            <label class="drop-zone" for="property-file">
+              <span class="upload-glyph" aria-hidden="true">↑</span>
+              <strong>Choose a property data file</strong>
+              <span class="drop-copy">CSV or JSON · up to 10 MB</span>
+              <span class="file-name" id="file-name">No file selected</span>
+            </label>
+            <input
+              class="visually-hidden"
+              id="property-file"
+              name="file"
+              type="file"
+              accept=".csv,.json,application/json,text/csv"
+              required
+            />
+            <div class="field-note">
+              <span class="note-mark">i</span
+              ><span
+                >Common address, price, bed, bath, and area headings are mapped
+                automatically. Unmapped values are retained with each
+                record.</span
+              >
+            </div>
+            <button class="submit-button" type="submit">
+              Import file <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+
+          <form
+            class="intake-form mode-panel"
+            id="manual-panel"
+            role="tabpanel"
+            aria-labelledby="manual-tab"
+            data-mode="manual"
+            hidden
+          >
+            <input type="hidden" name="source_type" value="manual" />
+            <div class="field-grid">
+              <label class="field field-wide"
+                ><span>Street address</span
+                ><input
+                  name="address"
+                  autocomplete="street-address"
+                  placeholder="214 Cedar Avenue"
+              /></label>
+              <label class="field"
+                ><span>City</span
+                ><input
+                  name="city"
+                  autocomplete="address-level2"
+                  placeholder="Ames"
+              /></label>
+              <label class="field"
+                ><span>State</span
+                ><input
+                  name="state"
+                  autocomplete="address-level1"
+                  placeholder="IA"
+              /></label>
+              <label class="field"
+                ><span>Postal code</span
+                ><input
+                  name="postal_code"
+                  autocomplete="postal-code"
+                  placeholder="50010"
+              /></label>
+              <label class="field"
+                ><span>Neighborhood</span
+                ><input name="neighborhood" placeholder="West Ames"
+              /></label>
+              <label class="field"
+                ><span>Property type</span
+                ><select name="property_type">
+                  <option value="">Select type</option>
+                  <option>Single-family</option>
+                  <option>Condo</option>
+                  <option>Townhouse</option>
+                  <option>Multi-family</option>
+                  <option>Land</option>
+                  <option>Other</option>
+                </select></label
+              >
+              <label class="field"
+                ><span>Listing status</span
+                ><select name="listing_status">
+                  <option value="">Select status</option>
+                  <option>For sale</option>
+                  <option>Pending</option>
+                  <option>Sold</option>
+                  <option>Off market</option>
+                </select></label
+              >
+              <label class="field"
+                ><span>List price ($)</span
+                ><input
+                  name="list_price"
+                  inputmode="decimal"
+                  placeholder="285000"
+              /></label>
+              <label class="field"
+                ><span>Sale price ($)</span
+                ><input
+                  name="sale_price"
+                  inputmode="decimal"
+                  placeholder="275000"
+              /></label>
+              <label class="field"
+                ><span>Bedrooms</span
+                ><input name="bedrooms" inputmode="numeric" placeholder="3"
+              /></label>
+              <label class="field"
+                ><span>Bathrooms</span
+                ><input name="bathrooms" inputmode="decimal" placeholder="2"
+              /></label>
+              <label class="field"
+                ><span>Living area (sq ft)</span
+                ><input
+                  name="living_area_sqft"
+                  inputmode="numeric"
+                  placeholder="1650"
+              /></label>
+              <label class="field"
+                ><span>Lot area (sq ft)</span
+                ><input
+                  name="lot_area_sqft"
+                  inputmode="numeric"
+                  placeholder="8400"
+              /></label>
+              <label class="field"
+                ><span>Year built</span
+                ><input
+                  name="year_built"
+                  inputmode="numeric"
+                  placeholder="1998"
+              /></label>
+              <label class="field field-wide"
+                ><span>Source link or note</span
+                ><input
+                  name="source_reference"
+                  placeholder="https://… or agent / report reference"
+              /></label>
+            </div>
+            <div class="field-note">
+              <span class="note-mark">i</span
+              ><span
+                >Enter an address, postal code, or neighborhood, plus a list or
+                sale price.</span
+              >
+            </div>
+            <button class="submit-button" type="submit">
+              Save property <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+
+          <form
+            class="intake-form mode-panel"
+            id="html-panel"
+            role="tabpanel"
+            aria-labelledby="html-tab"
+            data-mode="html"
+            hidden
+          >
+            <input type="hidden" name="source_type" value="html" />
+            <label class="field"
+              ><span>Listing page HTML</span
+              ><textarea
+                name="html"
+                rows="10"
+                placeholder="Paste HTML containing the listing details or structured listing data…"
+                required
+              ></textarea>
+            </label>
+            <label class="field"
+              ><span>Source page link <small>Optional</small></span
+              ><input
+                name="source_reference"
+                type="url"
+                placeholder="https://listing.example/property"
+            /></label>
+            <div class="field-note">
+              <span class="note-mark">i</span
+              ><span
+                >Markup is parsed locally. Nothing is fetched from the link;
+                review extracted details before import.</span
+              >
+            </div>
+            <button class="submit-button" type="submit">
+              Parse and save <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+          <div
+            class="form-feedback"
+            id="form-feedback"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></div>
+          <p class="storage-note">
+            <span class="storage-dot"></span>Saved to
+            <code>dataset/external_properties.csv</code>; never mixed into Ames
+            training data.
+          </p>
+        </section>
+
+        <aside class="summary-column" aria-label="Dataset summary">
+          <section class="summary-panel">
+            <div class="panel-heading compact-heading">
+              <div>
+                <p class="section-kicker">EXTERNAL RECORDS</p>
+                <h2>Dataset pulse</h2>
+              </div>
+              <span class="live-indicator">LIVE</span>
+            </div>
+            <div class="metrics-row">
+              <div class="metric">
+                <span class="metric-label">PROPERTIES</span
+                ><strong>{{ total_records }}</strong
+                ><span class="metric-caption">saved records</span>
+              </div>
+              <div class="metric metric-secondary">
+                <span class="metric-label">SOURCES</span
+                ><strong>{{ source_count }}</strong
+                ><span class="metric-caption">intake types</span>
+              </div>
+            </div>
+            {% if source_chart_html %}
+            <div class="chart-wrap">{{ source_chart_html|safe }}</div>
+            {% else %}
+            <div class="empty-chart">
+              <span class="empty-chart-mark">＋</span
+              ><span
+                >Source activity appears here<br />after the first import.</span
+              ><span class="empty-chart-rule"></span>
+            </div>
+            {% endif %}
+            <div class="history-boundary">
+              <span class="boundary-mark">↗</span>
+              <p>
+                <strong>Two datasets, two jobs.</strong> Ames sales support
+                model development. External records hold incoming market
+                observations.
+              </p>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="records-section" aria-labelledby="records-heading">
+        <div class="records-heading">
+          <div>
+            <p class="section-kicker">RECENTLY CAPTURED</p>
+            <h2 id="records-heading">
+              Property records
+              <span class="records-count">{{ total_records }}</span>
+            </h2>
+          </div>
+          <span class="table-caption">Newest first · latest 20</span>
+        </div>
+        <div class="table-frame">
+          <table>
+            <thead>
+              <tr>
+                <th>PROPERTY</th>
+                <th>LOCATION</th>
+                <th>TYPE / STATUS</th>
+                <th>PRICE</th>
+                <th>DETAILS</th>
+                <th>SOURCE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+              <tr>
+                <td class="property-cell">
+                  <strong>{{ row.address or 'Address not provided' }}</strong
+                  ><span>{{ row.record_id[:8] }}</span>
+                </td>
+                <td>
+                  {{ [row.city, row.state, row.postal_code]|select|join(', ') or
+                  row.neighborhood or '—' }}
+                </td>
+                <td>
+                  {{ row.property_type or '—' }}<span class="cell-secondary"
+                    >{{ row.listing_status or '—' }}</span
+                  >
+                </td>
+                <td class="price-cell">
+                  {% if row.list_price %}<span>ASK</span> ${{
+                  '{:,.0f}'.format(row.list_price|float) }}{% elif
+                  row.sale_price %}<span>SOLD</span> ${{
+                  '{:,.0f}'.format(row.sale_price|float) }}{% else %}—{% endif
+                  %}
+                </td>
+                <td>
+                  {{ row.bedrooms or '—' }} bd
+                  <span class="cell-divider">/</span> {{ row.bathrooms or '—' }}
+                  ba <span class="cell-divider">/</span> {% if
+                  row.living_area_sqft %}{{
+                  '{:,.0f}'.format(row.living_area_sqft|float) }} sf{% else
+                  %}—{% endif %}
+                </td>
+                <td>
+                  <span class="source-badge source-{{ row.source_type }}"
+                    >{{ row.source_type }}</span
+                  >
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="empty-records">
+                  <span class="empty-record-mark">01</span
+                  ><span>No external property records yet.</span
+                  ><span
+                    >Imported records stay separate from the cleaned Ames
+                    dataset.</span
+                  >
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <footer class="page-footer">
+        <span>FIELDNOTE / MARKET RESEARCH WORKSPACE</span
+        ><span
+          >External records require source and condition review before
+          analysis.</span
+        >
+      </footer>
+    </main>
+  </body>
+</html>

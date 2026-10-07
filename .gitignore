@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+*.py[cod]
+dataset/external_properties.csv
+dataset/external_properties.csv.tmp
